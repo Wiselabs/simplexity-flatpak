@@ -1,0 +1,55 @@
+app-id: br.com.wiselabs.simplexity
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '24.08'
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node20
+command: run.sh
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=x11
+  - --socket=pulseaudio
+  - --share=network
+  - --device=dri
+build-options:
+  append-path: /usr/lib/sdk/node20/bin
+  env:
+    NPM_CONFIG_LOGLEVEL: info
+modules:
+  - name: simplexity
+    buildsystem: simple
+    build-options:
+      env:
+        XDG_CACHE_HOME: /run/build/simplexity/flatpak-node/cache
+        npm_config_cache: /run/build/simplexity/flatpak-node/npm-cache
+        npm_config_offline: 'true'
+    build-commands:
+      # Install npm dependencies
+      - yarn install --offline
+      # Build the app; in this example the `dist` script
+      # in package.json runs electron-builder
+      - |
+        . ../flatpak-node/electron-builder-arch-args.sh
+        yarn run dist -- $ELECTRON_BUILDER_ARCH_ARGS  --linux --dir
+      # Bundle app and dependencies
+      - cp -a release-builds/linux*unpacked /app/main
+      # Install app wrapper
+      - install -Dm755 -t /app/bin/ ../run.sh
+    subdir: main
+    sources:
+      #- type: archive
+      #  url: https://github.com/Wiselabs/simplexity/archive/refs/tags/v1.0.0.tar.gz
+      #  sha256: 78addad3b781f929461c47597eb9ba43809a092ab9b0dc5a8013b88103e54d7f
+      - type: dir
+        path: '../simplexity'
+        dest: main
+      - generated-sources.json
+      # Wrapper to launch the app
+      - type: script
+        dest-filename: run.sh
+        commands:
+          - zypak-wrapper.sh /app/main/simplexity "$@"
